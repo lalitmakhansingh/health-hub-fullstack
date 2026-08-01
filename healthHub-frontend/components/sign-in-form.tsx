@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,20 +10,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react"
+import { apiFetch } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
 
 export function SignInForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; password?: string; submit?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const { user, checkedAuth, refetch } = useAuth()
 
-  const DEMO_CREDENTIALS = {
-    email: "patient@healthhub.com",
-    password: "demo123456",
-  }
+  useEffect(() => {
+    if (checkedAuth && user) router.push("/dashboard")
+  }, [checkedAuth, user, router])
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
@@ -46,37 +48,28 @@ export function SignInForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrors({}) // clear previous errors on a fresh attempt
 
     if (!validateForm()) return
 
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+   setIsLoading(true)
+    try {
+      await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      })
 
-    if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
+      await refetch() 
       setSuccess(true)
-      // Store user session in localStorage
-      localStorage.setItem(
-        "userSession",
-        JSON.stringify({
-          email,
-          name: "John Smith",
-          patientId: "PAT001",
-        }),
-      )
       setTimeout(() => {
         router.push("/dashboard")
-      }, 1500)
-    } else {
-      setErrors({ email: "Invalid credentials. Use demo@healthhub.com / demo123456" })
+        router.refresh()
+      }, 800)
+    } catch (err: any) {
+      setErrors({ submit: err.message })
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
-  }
-
-  const fillDemoCredentials = () => {
-    setEmail(DEMO_CREDENTIALS.email)
-    setPassword(DEMO_CREDENTIALS.password)
   }
 
   return (
@@ -91,6 +84,13 @@ export function SignInForm() {
           <div className="p-4 bg-secondary/10 border border-secondary/30 rounded-lg flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-secondary flex-shrink-0" />
             <p className="text-sm text-foreground">Sign in successful! Redirecting...</p>
+          </div>
+        )}
+
+        {errors.submit && (
+          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+            <p className="text-sm text-foreground">{errors.submit}</p>
           </div>
         )}
 
@@ -159,28 +159,6 @@ export function SignInForm() {
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full bg-transparent border-border"
-          onClick={fillDemoCredentials}
-        >
-          Use Demo Credentials
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-card text-muted-foreground">Or</span>
-          </div>
-        </div>
-
-        <Button variant="outline" className="w-full bg-transparent border-border">
-          Sign in with Healthcare ID
-        </Button>
 
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}

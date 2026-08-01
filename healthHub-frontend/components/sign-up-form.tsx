@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Eye, EyeOff, AlertCircle, CheckCircle, Check } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { apiFetch } from "@/lib/api"
+import { useEffect } from "react"
+import { useAuth } from "@/lib/auth-context"
 
 export function SignUpForm() {
   const [formData, setFormData] = useState({
@@ -18,11 +22,17 @@ export function SignUpForm() {
     password: "",
     confirmPassword: "",
   })
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const { user, checkedAuth, refetch } = useAuth()
+
+  useEffect(() => {
+  if (checkedAuth && user) router.push("/dashboard")
+}, [checkedAuth, user, router])
 
   const passwordStrength = (password: string) => {
     if (!password) return 0
@@ -64,18 +74,33 @@ export function SignUpForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrors({}) // clear previous errors on a fresh attempt
 
     if (!validateForm()) return
 
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setSuccess(true)
-    setIsLoading(false)
-
-    setTimeout(() => {
-      setFormData({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "" })
-      setSuccess(false)
-    }, 3000)
+    try {
+      await apiFetch("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+      await refetch()
+      
+      setSuccess(true)
+      setTimeout(() => {
+        router.push("/dashboard")
+        router.refresh()
+      }, 1000)
+    } catch (err: any) {
+      setErrors({ submit: err.message })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const strength = passwordStrength(formData.password)
@@ -94,6 +119,13 @@ export function SignUpForm() {
           <div className="p-4 bg-secondary/10 border border-secondary/30 rounded-lg flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-secondary flex-shrink-0" />
             <p className="text-sm text-foreground">Account created successfully!</p>
+          </div>
+        )}
+
+        {errors.submit && (
+          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+            <p className="text-sm text-foreground">{errors.submit}</p>
           </div>
         )}
 

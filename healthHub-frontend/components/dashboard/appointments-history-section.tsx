@@ -16,18 +16,18 @@ export default function AppointmentsHistorySection({ appointments }: { appointme
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {appointments.map((apt) => (
             <div
-              key={apt.id}
+              key={apt._id}
               className="p-3 bg-secondary/5 border border-secondary/20 rounded-lg hover:bg-secondary/10 transition-colors"
             >
-              <div className="font-semibold text-sm text-foreground">{apt.doctor}</div>
+              <div className="font-semibold text-sm text-foreground">{apt.doctorName}</div>
               <div className="text-xs text-muted-foreground mb-2">{apt.specialty}</div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                 <Calendar className="h-3 w-3" />
-                {new Date(apt.date).toLocaleDateString()}
+                {new Date(apt.appointmentDate).toLocaleDateString()}
               </div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                {apt.time}
+                {apt.appointmentTime}
               </div>
               <div className="mt-2 inline-block px-2 py-1 bg-secondary/20 text-secondary text-xs font-medium rounded">
                 {apt.status}

@@ -101,7 +101,7 @@ export default function AboutPage() {
 
             <div className="hidden lg:block">
               <img
-                src="/teamwork-healthcare-professional.jpg"
+                src="/healthcare-professionals-modern-medical-office.jpg"
                 alt="HealthHub team collaboration"
                 className="rounded-2xl shadow-2xl w-full h-auto"
               />

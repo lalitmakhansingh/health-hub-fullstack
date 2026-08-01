@@ -2,20 +2,14 @@
 
 import type React from "react"
 
+import { apiFetch } from "@/lib/api"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, CheckCircle, Calendar } from "lucide-react"
+import { DOCTORS } from "@/lib/doctors"
 
-const DOCTORS = [
-  { id: 1, name: "Dr. Sarah Johnson", specialty: "General Medicine", avatar: "SJ" },
-  { id: 2, name: "Dr. Michael Chen", specialty: "Cardiology", avatar: "MC" },
-  { id: 3, name: "Dr. Emily Williams", specialty: "Dermatology", avatar: "EW" },
-  { id: 4, name: "Dr. James Brown", specialty: "Orthopedics", avatar: "JB" },
-]
-
-const TIME_SLOTS = ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"]
 
 export default function BookAppointmentSection({ onAppointmentBooked }: { onAppointmentBooked: (apt: any) => void }) {
   const [selectedDoctor, setSelectedDoctor] = useState("")
@@ -25,6 +19,8 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const selectedDoctorData = DOCTORS.find((d) => d.id.toString() === selectedDoctor)
+  const availableSlots = selectedDoctorData?.slots ?? []
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -39,38 +35,39 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  e.preventDefault()
 
-    if (!validateForm()) return
+  if (!validateForm()) return
 
-    setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  setIsLoading(true)
+  const doctor = DOCTORS.find((d) => d.id === Number.parseInt(selectedDoctor))
 
-    const doctor = DOCTORS.find((d) => d.id === Number.parseInt(selectedDoctor))
-    const newAppointment = {
-      id: Date.now(),
-      doctor: doctor?.name,
-      specialty: doctor?.specialty,
-      date: selectedDate,
-      time: selectedTime,
-      reason,
-      status: "Confirmed",
-      bookedAt: new Date().toISOString(),
-    }
+  try {
+    const { appointment } = await apiFetch("/api/appointments", {
+      method: "POST",
+      body: JSON.stringify({
+        doctorName: doctor?.name,
+        specialty: doctor?.specialty,
+        appointmentDate: selectedDate,
+        appointmentTime: selectedTime,
+        reason,
+      }),
+    })
 
-    onAppointmentBooked(newAppointment)
+    onAppointmentBooked(appointment)
     setSuccess(true)
     setSelectedDoctor("")
     setSelectedDate("")
     setSelectedTime("")
     setReason("")
 
-    setTimeout(() => {
-      setSuccess(false)
-    }, 3000)
-
+    setTimeout(() => setSuccess(false), 3000)
+  } catch (err: any) {
+    setErrors({ submit: err.message })
+  } finally {
     setIsLoading(false)
   }
+}
 
   // Set minimum date to today
   const today = new Date().toISOString().split("T")[0]
@@ -89,6 +86,13 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
         </div>
       )}
 
+      {errors.submit && (
+  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
+    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+    <p className="text-sm text-foreground">{errors.submit}</p>
+  </div>
+)}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label className="text-foreground font-medium">Select Doctor</Label>
@@ -99,6 +103,7 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
                 type="button"
                 onClick={() => {
                   setSelectedDoctor(doctor.id.toString())
+                  setSelectedTime("")
                   setErrors({ ...errors, doctor: "" })
                 }}
                 className={`p-3 rounded-lg border-2 transition-colors text-left ${
@@ -154,10 +159,10 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
                 setErrors({ ...errors, time: "" })
               }}
               className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground"
-              disabled={isLoading}
+              disabled={isLoading || !selectedDoctor}
             >
-              <option value="">Select time</option>
-              {TIME_SLOTS.map((slot) => (
+              <option value="">{selectedDoctor ? "Select time" : "Select a doctor first"}</option>
+              {availableSlots.map((slot) => (
                 <option key={slot} value={slot}>
                   {slot}
                 </option>

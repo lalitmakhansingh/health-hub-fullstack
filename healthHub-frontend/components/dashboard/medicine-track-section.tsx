@@ -22,7 +22,7 @@ export default function MedicineTrackSection({ medicines }: { medicines: any[] }
             const active = isActive(medicine.endDate)
             return (
               <div
-                key={medicine.id}
+                key={medicine._id}
                 className={`p-3 rounded-lg border transition-colors ${
                   active ? "bg-secondary/5 border-secondary/20" : "bg-muted/5 border-muted/20"
                 }`}
