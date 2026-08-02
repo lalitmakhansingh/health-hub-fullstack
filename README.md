@@ -11,8 +11,6 @@ A full-stack healthcare portal enabling patient registration, appointment schedu
 
 **Frontend**
 - Next.js 16 (App Router)
-- TypeScript
-- Tailwind CSS v4 + shadcn/ui (Radix UI primitives)
 - Fetch API (via a lightweight custom wrapper) for backend communication
 
 **Backend**
