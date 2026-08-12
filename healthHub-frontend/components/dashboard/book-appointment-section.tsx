@@ -3,15 +3,15 @@
 import type React from "react"
 
 import { apiFetch } from "@/lib/api"
-import { useState } from "react"
+import { useState, useEffect,useRef  } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, CheckCircle, Calendar } from "lucide-react"
 import { DOCTORS } from "@/lib/doctors"
 
-
-export default function BookAppointmentSection({ onAppointmentBooked }: { onAppointmentBooked: (apt: any) => void }) {
+export default function BookAppointmentSection({ onAppointmentBooked,availabilityRefreshKey }: { onAppointmentBooked: (apt: any) => void 
+  availabilityRefreshKey: number}) {
   const [selectedDoctor, setSelectedDoctor] = useState("")
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
@@ -19,8 +19,48 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [bookedSlots, setBookedSlots] = useState<string[]>([])
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const dateInputRef = useRef<HTMLInputElement>(null)
+
   const selectedDoctorData = DOCTORS.find((d) => d.id.toString() === selectedDoctor)
   const availableSlots = selectedDoctorData?.slots ?? []
+
+
+  // Whenever the doctor or date changes, ask the backend which of that
+  // doctor's slots are already booked on that specific date, so we can
+  // show them as unavailable (red, disabled) instead of letting the user
+  // pick one and only finding out after clicking Book.
+  useEffect(() => {
+    if (!selectedDoctor || !selectedDate || !selectedDoctorData) {
+      setBookedSlots([])
+      return
+    }
+
+    const checkAvailability = async () => {
+      setCheckingAvailability(true)
+      try {
+        const params = new URLSearchParams({
+          doctorName: selectedDoctorData.name,
+          date: selectedDate,
+        })
+        const { bookedSlots } = await apiFetch(`/api/appointments/availability?${params}`)
+        setBookedSlots(bookedSlots)
+
+        // If the time the user had already picked just became booked
+        // (e.g. they changed the date after selecting a time), clear it.
+        if (selectedTime && bookedSlots.includes(selectedTime)) {
+          setSelectedTime("")
+        }
+      } catch {
+        setBookedSlots([]) // fail open — don't block booking just because the check failed
+      } finally {
+        setCheckingAvailability(false)
+      }
+    }
+
+    checkAvailability()
+  }, [selectedDoctor, selectedDate, availabilityRefreshKey])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -35,41 +75,40 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
+    e.preventDefault()
 
-  if (!validateForm()) return
+    if (!validateForm()) return
 
-  setIsLoading(true)
-  const doctor = DOCTORS.find((d) => d.id === Number.parseInt(selectedDoctor))
+    setIsLoading(true)
+    const doctor = DOCTORS.find((d) => d.id === Number.parseInt(selectedDoctor))
 
-  try {
-    const { appointment } = await apiFetch("/api/appointments", {
-      method: "POST",
-      body: JSON.stringify({
-        doctorName: doctor?.name,
-        specialty: doctor?.specialty,
-        appointmentDate: selectedDate,
-        appointmentTime: selectedTime,
-        reason,
-      }),
-    })
+    try {
+      const { appointment } = await apiFetch("/api/appointments", {
+        method: "POST",
+        body: JSON.stringify({
+          doctorName: doctor?.name,
+          specialty: doctor?.specialty,
+          appointmentDate: selectedDate,
+          appointmentTime: selectedTime,
+          reason,
+        }),
+      })
 
-    onAppointmentBooked(appointment)
-    setSuccess(true)
-    setSelectedDoctor("")
-    setSelectedDate("")
-    setSelectedTime("")
-    setReason("")
+      onAppointmentBooked(appointment)
+      setSuccess(true)
+      setSelectedDoctor("")
+      setSelectedDate("")
+      setSelectedTime("")
+      setReason("")
 
-    setTimeout(() => setSuccess(false), 3000)
-  } catch (err: any) {
-    setErrors({ submit: err.message })
-  } finally {
-    setIsLoading(false)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err: any) {
+      setErrors({ submit: err.message })
+    } finally {
+      setIsLoading(false)
+    }
   }
-}
 
-  // Set minimum date to today
   const today = new Date().toISOString().split("T")[0]
 
   return (
@@ -87,11 +126,11 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
       )}
 
       {errors.submit && (
-  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
-    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-    <p className="text-sm text-foreground">{errors.submit}</p>
-  </div>
-)}
+        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+          <p className="text-sm text-foreground">{errors.submit}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -125,12 +164,13 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-foreground font-medium">
-              Appointment Date
-            </Label>
+        <div className="space-y-2">
+          <Label htmlFor="date" className="text-foreground font-medium">
+            Appointment Date
+          </Label>
+          <div onClick={() => dateInputRef.current?.showPicker?.()} className="cursor-pointer w-1/2">
             <Input
+              ref={dateInputRef}
               id="date"
               type="date"
               value={selectedDate}
@@ -139,42 +179,68 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
                 setErrors({ ...errors, date: "" })
               }}
               min={today}
-              className="bg-input border-border text-foreground"
+              className="bg-input border-border text-foreground cursor-pointer"
               disabled={isLoading}
             />
-            {errors.date && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                {errors.date}
-              </div>
-            )}
           </div>
+          {errors.date && (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              {errors.date}
+            </div>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label className="text-foreground font-medium">Time Slot</Label>
-            <select
-              value={selectedTime}
-              onChange={(e) => {
-                setSelectedTime(e.target.value)
-                setErrors({ ...errors, time: "" })
-              }}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground"
-              disabled={isLoading || !selectedDoctor}
-            >
-              <option value="">{selectedDoctor ? "Select time" : "Select a doctor first"}</option>
-              {availableSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
-              ))}
-            </select>
-            {errors.time && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                {errors.time}
-              </div>
+        <div className="space-y-2">
+          <Label className="text-foreground font-medium">
+            Time Slot
+            {checkingAvailability && (
+              <span className="text-xs text-muted-foreground font-normal ml-2">Checking availability...</span>
             )}
-          </div>
+          </Label>
+
+          {!selectedDoctor ? (
+            <p className="text-sm text-muted-foreground py-2">Select a doctor first</p>
+          ) : !selectedDate ? (
+            <p className="text-sm text-muted-foreground py-2">Select a date first</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {availableSlots.map((slot) => {
+                const isBooked = bookedSlots.includes(slot)
+                const isSelected = selectedTime === slot
+
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    disabled={isBooked}
+                    onClick={() => {
+                      setSelectedTime(slot)
+                      setErrors({ ...errors, time: "" })
+                    }}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      isBooked
+                        ? "bg-destructive/10 border-destructive/30 text-destructive cursor-not-allowed"
+                        : isSelected
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border hover:border-primary/50 text-foreground"
+                    }`}
+                    title={isBooked ? "Already booked" : undefined}
+                  >
+                    {slot}
+                    {isBooked && <span className="block text-[10px]">Booked</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {errors.time && (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              {errors.time}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -185,6 +251,7 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
             id="reason"
             placeholder="Please describe your symptoms or reason for the visit..."
             value={reason}
+            maxLength={50}
             onChange={(e) => {
               setReason(e.target.value)
               setErrors({ ...errors, reason: "" })
@@ -192,6 +259,7 @@ export default function BookAppointmentSection({ onAppointmentBooked }: { onAppo
             className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground min-h-24 resize-none"
             disabled={isLoading}
           />
+          <p className="text-xs text-muted-foreground text-right">{reason.length}/50</p>
           {errors.reason && (
             <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertCircle className="h-4 w-4" />

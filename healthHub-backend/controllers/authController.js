@@ -1,5 +1,8 @@
 const jwt = require("jsonwebtoken")
+const { OAuth2Client } = require("google-auth-library")
 const User = require("../models/User")
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 function generateToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" })
@@ -77,6 +80,51 @@ exports.login = async (req, res) => {
 exports.logout = (req, res) => {
   res.clearCookie("token")
   res.json({ message: "Logged out" })
+}
+
+// POST /api/auth/google
+exports.googleAuth = async (req, res) => {
+  try {
+    const { idToken } = req.body
+
+    if (!idToken) {
+      return res.status(400).json({ message: "Google ID token is required" })
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    })
+    const payload = ticket.getPayload()
+    const { sub: googleId, email, given_name, family_name } = payload
+
+    let user = await User.findOne({ googleId })
+
+    if (!user) {
+      user = await User.findOne({ email })
+
+      if (user) {
+        user.googleId = googleId
+        await user.save()
+      } else {
+        user = await User.create({
+          firstName: given_name || "Google",
+          lastName: family_name || "User",
+          email,
+          googleId,
+        })
+      }
+    }
+
+    const token = generateToken(user._id)
+    setTokenCookie(res, token)
+
+    res.json({
+      user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email },
+    })
+  } catch (err) {
+    res.status(401).json({ message: "Google sign-in failed", error: err.message })
+  }
 }
 
 // Requires requireAuth middleware to have run first (sets req.userId)

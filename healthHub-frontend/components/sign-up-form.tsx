@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { GoogleSignInButton } from "@/components/google-signin-button"
 
 export function SignUpForm() {
   const [formData, setFormData] = useState({
@@ -298,6 +299,17 @@ export function SignUpForm() {
             {isLoading ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
+
+            <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
+          </div>
+        </div>
+
+        <GoogleSignInButton />
 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}

@@ -3,13 +3,13 @@ import { DOCTORS } from "@/lib/doctors"
 
 export default function AvailableDoctorsSection() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col flex-1 min-h-0">
       <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
         <Stethoscope className="h-5 w-5 text-primary" />
         Available Doctors
       </h3>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-3 flex-1 overflow-y-auto">
         {DOCTORS.map((doctor) => (
           <div key={doctor.id} className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
             <div className="font-semibold text-foreground">{doctor.name}</div>

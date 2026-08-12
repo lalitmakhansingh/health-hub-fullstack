@@ -7,6 +7,7 @@ const connectDB = require("./config/db")
 const authRoutes = require("./routes/authRoutes")
 const appointmentRoutes = require("./routes/appointmentRoutes")
 const medicineRoutes = require("./routes/medicineRoutes")
+const chatRoutes = require("./routes/chatRoutes")
 
 const app = express()
 
@@ -26,6 +27,7 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }))
 app.use("/api/auth", authRoutes)
 app.use("/api/appointments", appointmentRoutes)
 app.use("/api/medicines", medicineRoutes)
+app.use("/api/chat", chatRoutes)
 
 // Basic error handler — catches anything thrown that wasn't already handled in a controller
 app.use((err, req, res, next) => {

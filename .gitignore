@@ -3,3 +3,14 @@ node_modules
 .env
 .env.local
 *.log
+
+node_modules/
+.next/
+
+.env
+.env.local
+.env.*.local
+
+/healthhub-backend/env
+/healthhub-backend/.env
+/healthhub-backend/.env.local

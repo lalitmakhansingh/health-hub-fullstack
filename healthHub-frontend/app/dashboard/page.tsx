@@ -9,6 +9,8 @@ import BookAppointmentSection from "@/components/dashboard/book-appointment-sect
 import AppointmentsHistorySection from "@/components/dashboard/appointments-history-section"
 import AvailableDoctorsSection from "@/components/dashboard/available-doctors-section"
 import MedicineTrackSection from "@/components/dashboard/medicine-track-section"
+import ChatbotWidget from "@/components/dashboard/chatbot-widget"
+import AddMedicineSection from "@/components/dashboard/add-medicine-section"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -16,6 +18,7 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [medicines, setMedicines] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!checkedAuth) return // context hasn't resolved yet — wait, don't act on stale info
@@ -41,8 +44,31 @@ export default function DashboardPage() {
   }, [checkedAuth, user, router])
 
   const handleAppointmentBooked = (newAppointment: any) => {
-    setAppointments((prev) => [newAppointment, ...prev])
+  setAppointments((prev) => [newAppointment, ...prev])
+  setAvailabilityRefreshKey((prev) => prev + 1)
+}
+
+  const handleAppointmentCancelled = (appointmentId: string) => {
+  setAppointments((prev) =>
+    prev.map((apt) => (apt._id === appointmentId ? { ...apt, status: "Cancelled" } : apt))
+  )
+  setAvailabilityRefreshKey((prev) => prev + 1) // tells BookAppointmentSection to re-check availability
+}
+
+const handleAppointmentRemoved = (appointmentId: string) => {
+    setAppointments((prev) => prev.filter((apt) => apt._id !== appointmentId))
   }
+
+const handleMedicineAdded = (newMedicine: any) => {
+  setMedicines((prev) => [newMedicine, ...prev])
+}
+
+const handleAppointmentRescheduled = (updatedAppointment: any) => {
+  setAppointments((prev) =>
+    prev.map((apt) => (apt._id === updatedAppointment._id ? updatedAppointment : apt))
+  )
+  setAvailabilityRefreshKey((prev) => prev + 1) // old slot frees up, new slot becomes taken
+}
 
   if (isLoading || !user) {
     return null
@@ -60,23 +86,33 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2 p-6 border border-border">
-            <BookAppointmentSection onAppointmentBooked={handleAppointmentBooked} />
+            <BookAppointmentSection 
+              onAppointmentBooked={handleAppointmentBooked} availabilityRefreshKey={availabilityRefreshKey}
+            />
           </Card>
 
           <Card className="p-6 border border-border">
-            <AppointmentsHistorySection appointments={appointments} />
+            <AppointmentsHistorySection appointments={appointments}
+            onAppointmentCancelled={handleAppointmentCancelled}
+            onAppointmentRemoved={handleAppointmentRemoved}
+            onAppointmentRescheduled={handleAppointmentRescheduled}
+            />
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 border border-border">
+          <Card className="p-6 border border-border flex flex-col">
             <AvailableDoctorsSection />
           </Card>
 
-          <Card className="p-6 border border-border">
-            <MedicineTrackSection medicines={medicines} />
-          </Card>
+          <Card className="p-6 border border-border space-y-6">
+    <AddMedicineSection onMedicineAdded={handleMedicineAdded} />
+    <div className="border-t border-border pt-6">
+      <MedicineTrackSection medicines={medicines} />
+    </div>
+  </Card>
         </div>
+        <ChatbotWidget />
       </div>
     </div>
   )
