@@ -10,10 +10,10 @@ function generateToken(userId) {
 
 function setTokenCookie(res, token) {
   res.cookie("token", token, {
-    httpOnly: true, // JS on the frontend can't read this — protects against XSS token theft
-    secure: process.env.NODE_ENV === "production", // HTTPS only in production
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days, matches JWT expiry
+    httpOnly: true,
+    secure: true, // required in production — sameSite:"none" cookies MUST be secure
+    sameSite: "none", // required to allow the cookie to be sent cross-domain (Vercel → Render)
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 }
 
