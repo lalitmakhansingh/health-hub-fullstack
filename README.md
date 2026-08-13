@@ -117,7 +117,7 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=a_long_random_string
 CLIENT_URL=http://localhost:3000
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_MODEL=gemini-3.5-flash-lite
 GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
