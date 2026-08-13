@@ -3,7 +3,7 @@
 
 A full-stack healthcare portal enabling patient registration, appointment scheduling, and medicine tracking. Built as a hackathon prototype and later extended with a real backend, authentication, and database.
 
-**Live Demo:** _Not currently deployed — run locally following the instructions below._
+**Live Demo:** _(https://health-hub-fullstack-f1ud.vercel.app/)
 
 ---
 
