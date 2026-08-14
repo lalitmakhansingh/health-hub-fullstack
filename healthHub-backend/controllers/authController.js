@@ -78,7 +78,15 @@ exports.login = async (req, res) => {
 }
 
 exports.logout = (req, res) => {
-  res.clearCookie("token")
+  // IMPORTANT: these options must match setTokenCookie() exactly (httpOnly, secure, sameSite).
+  // clearCookie only overwrites the existing cookie if its attributes match — otherwise the
+  // browser treats this as a completely different cookie and the original one never gets cleared,
+  // which is what was causing users to stay logged in after "logging out" and refreshing.
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  })
   res.json({ message: "Logged out" })
 }
 
