@@ -27,4 +27,7 @@ export const DOCTORS = [
     slots: ["02:00 PM", "03:00 PM", "04:00 PM"],
     experience: "10 years",
   },
+  {id: 5,name: "Dr. Jemima", specialty: "Gynaecologist", slots: ["07:00 AM", "03:00 PM", "04:00 PM","05:00 PM"],experience: "11 Years"},
+  {id: 6,name: "Dr. Ayush", specialty: "Neurologist", slots: ["09:00 AM", "10:00 AM", "11:00 AM", "04:00 PM"],experience: "18 Years"},
+
 ]

@@ -8,6 +8,8 @@ const DOCTORS = [
   { name: "Dr. Michael Chen", specialty: "Cardiology", slots: ["10:00 AM", "03:00 PM"] },
   { name: "Dr. Emily Williams", specialty: "Dermatology", slots: ["09:00 AM", "10:00 AM", "11:00 AM", "04:00 PM"] },
   { name: "Dr. James Brown", specialty: "Orthopedics", slots: ["02:00 PM", "03:00 PM", "04:00 PM"] },
+  {name: "Dr. Jemima", specialty: "Gynaecologist", slots: ["07:00 AM", "03:00 PM", "04:00 PM","05:00 PM"]},
+  {name: "Dr. Ayush", specialty: "Neurologist", slots: ["09:00 AM", "10:00 AM", "11:00 AM", "04:00 PM"]},
 ]
 
 module.exports = DOCTORS
