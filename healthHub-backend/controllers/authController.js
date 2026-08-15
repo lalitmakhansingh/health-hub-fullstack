@@ -12,7 +12,7 @@ function setTokenCookie(res, token) {
   res.cookie("token", token, {
     httpOnly: true,
     secure: true, // required in production — sameSite:"none" cookies MUST be secure
-    sameSite: "none", // required to allow the cookie to be sent cross-domain (Vercel → Render)
+    sameSite: "lax", // required to allow the cookie to be sent cross-domain (Vercel → Render)
     maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 }
@@ -85,7 +85,7 @@ exports.logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: true,
-    sameSite: "none",
+    sameSite: "lax",
   })
   res.json({ message: "Logged out" })
 }

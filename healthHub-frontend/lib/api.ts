@@ -1,9 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(path, {
     ...options,
-    credentials: "include", // sends/receives the httpOnly cookie — required for auth to work
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -11,10 +9,6 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   })
 
   const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(data.message || "Request failed")
-  }
-
+  if (!res.ok) throw new Error(data.message || "Request failed")
   return data
 }
