@@ -8,7 +8,17 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     },
   })
 
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || "Request failed")
+  const text = await res.text()
+  let data: any = {}
+  try {
+    data = text ? JSON.parse(text) : {}
+  } catch {
+    data = { message: text || "Request failed" }
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || `Request failed (${res.status})`)
+  }
+
   return data
 }
