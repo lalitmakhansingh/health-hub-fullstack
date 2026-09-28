@@ -47,6 +47,12 @@ export function SignInForm() {
     return Object.keys(newErrors).length === 0
   }
 
+  const handleDemoCredentials = () => {
+    setEmail("abc@gmail.com")
+    setPassword("LALit@2005")
+    setErrors({})
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrors({}) // clear previous errors on a fresh attempt
@@ -172,12 +178,37 @@ export function SignInForm() {
 
         <GoogleSignInButton />
 
-        <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="/signup" className="text-primary font-semibold hover:text-primary/90">
-            Create one now
-          </Link>
-        </p>
+                <div className="space-y-3">
+          <p className="text-center text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-primary font-semibold hover:text-primary/90">
+              Create one now
+            </Link>
+          </p>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-card text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleDemoCredentials}
+            disabled={isLoading}
+          >
+            Use Demo Credentials
+          </Button>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Demo account — click above to autofill
+          </p>
+        </div>
       </div>
     </Card>
   )

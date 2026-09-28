@@ -1,6 +1,7 @@
 const { GoogleGenAI } = require("@google/genai")
 const Appointment = require("../models/Appointment")
 const Medicine = require("../models/Medicine")
+const DOCTORS = require("../config/doctors")
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
@@ -12,7 +13,7 @@ const SYSTEM_INSTRUCTION = `You are a helpful assistant inside the HealthHub pat
 
 The portal currently supports ONLY these features — do not describe, imply,
 or confirm any feature beyond this list, even if it sounds plausible:
-- Viewing available doctors and their time slots
+- Viewing available doctors and their configured time slots
 - Booking a new appointment (selecting doctor, date, time, and reason).
   Already-booked time slots are shown in red and disabled automatically —
   patients cannot select a slot someone else already booked with that doctor.
@@ -33,8 +34,14 @@ plausible-sounding set of steps.
 
 You can help patients with:
 - Answering questions about their own appointments and medicines (data is provided to you below)
+- Answering questions about available doctors and their configured time slots (data is provided below)
 - Explaining how to use the features listed above
 - General, non-diagnostic health information
+
+Important distinction about doctor availability:
+- The doctor schedule below shows the time slots each doctor offers.
+- Do not claim that a slot is currently free for a specific date unless that is supported by the provided information.
+- If the user asks about real-time/date-specific availability, explain that the listed slots are the doctor's offered slots and that the booking screen checks current booked slots.
 
 You must NEVER:
 - Diagnose a medical condition or suggest what a symptom "likely" is
@@ -45,11 +52,11 @@ You must NEVER:
   or a doctor right away, and do not attempt to answer the underlying question.
 - Describe a portal feature that isn't in the supported-features list above,
   even if it seems like a reasonable thing the app might do
+- Invent doctors or time slots that are not present in the provided doctor schedule
 
 Always recommend the user consult their doctor for anything diagnostic or
-prescriptive. Keep answers concise and friendly. If asked about appointments
-or medicines, use only the data provided to you in this conversation — never
-invent appointments or medicines that weren't given to you.`
+prescriptive. Keep answers concise and friendly. If asked about appointments, medicines, doctors, or time slots,
+use only the data provided to you in this conversation — never invent data.`
 
 
 exports.sendMessage = async (req, res) => {
@@ -60,12 +67,22 @@ exports.sendMessage = async (req, res) => {
       return res.status(400).json({ message: "Message is required" })
     }
 
+    const isDoctorScheduleQuery =
+  /\b(doctor|doctors)\b/i.test(message) &&
+  /\b(available|availability|slot|slots|schedule|time|specialty|specialist)\b/i.test(message)
+
     // Fetch the user's OWN data only — same scoping as every other route,
     // req.userId comes from the verified JWT, never trusted from the client.
     const [appointments, medicines] = await Promise.all([
       Appointment.find({ user: req.userId }).sort({ appointmentDate: -1 }).limit(10),
       Medicine.find({ user: req.userId }),
     ])
+
+    const doctorSchedule = DOCTORS.map((doctor) => ({
+      name: doctor.name,
+      specialty: doctor.specialty,
+      slots: doctor.slots,
+    }))
 
     const contextBlock = `
 Here is this patient's current data (use it to answer questions about their
@@ -80,10 +97,13 @@ Medicines:
 ${medicines.length === 0 ? "None" : medicines.map(m =>
   `- ${m.name}, ${m.dosage}, ${m.frequency}, from ${m.startDate} to ${m.endDate}`
 ).join("\n")}
+
+Available Doctors and Their Offered Time Slots:
+${doctorSchedule}
 `
 
     const result = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
       contents: `${contextBlock}\n\nPatient's question: ${message}`,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -92,7 +112,10 @@ ${medicines.length === 0 ? "None" : medicines.map(m =>
 
     const reply = result.text
 
-    res.json({ reply })
+    res.json({
+  reply,
+  doctors: isDoctorScheduleQuery ? doctorSchedule : [],
+})
   } catch (err) {
     res.status(500).json({ message: "Chat request failed", error: err.message })
   }
